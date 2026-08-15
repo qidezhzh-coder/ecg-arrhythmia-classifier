@@ -3,6 +3,7 @@
 import numpy as np
 import wfdb
 from scipy.signal import butter, filtfilt
+import os
 
 FS = 360  # Sampling frequency — constant for all MIT-BIH records
 
@@ -75,3 +76,43 @@ def process_record_list(record_list, data_path):
         except Exception as e:
             print(f"Warning: could not process record {name}: {e}")
     return np.vstack(all_beats), np.array(all_labels)
+
+def get_valid_records(data_path, required_exts=('.hea', '.dat', '.atr')):
+    """
+    Scans data_path and returns the list of record names that have
+    ALL required files (.hea, .dat, .atr).
+    Also reports incomplete/discarded records.
+    """
+    all_files = os.listdir(data_path)
+
+    # Base names of all .hea files found
+    candidates = sorted(
+        {os.path.splitext(f)[0] for f in all_files if f.endswith('.hea')},
+        key=lambda x: int(x) if x.isdigit() else x
+    )
+
+    valid_records = []
+    incomplete = {}
+
+    for rec in candidates:
+        missing = [
+            ext for ext in required_exts
+            if not os.path.exists(os.path.join(data_path, rec + ext))
+        ]
+        if missing:
+            incomplete[rec] = missing
+        else:
+            valid_records.append(rec)
+
+    return valid_records, incomplete
+
+def get_beat(signal, r_sample, before=90, after=110):
+    """Extract a normalized beat window centered on R-peak."""
+    start, end = r_sample - before, r_sample + after
+    if start < 0 or end > len(signal):
+        return None
+    beat = signal[start:end].astype(float)
+    std = beat.std()
+    if std < 1e-6:
+        return None
+    return (beat - beat.mean()) / std

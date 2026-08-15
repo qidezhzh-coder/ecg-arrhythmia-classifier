@@ -49,6 +49,15 @@ def extract_features_single(beat, fs=FS):
     f['spectral_ratio'] = f['low_freq_power'] / (f['high_freq_power'] + 1e-8)
     # Wide QRS (PVC) → more low-frequency energy → higher spectral_ratio
 
+    # Spectral entropy: how spread the energy is across frequencies
+    # Low = energy concentrated in few frequencies (sharp narrow QRS)
+    # High = energy spread across many frequencies (wide QRS or noisy beat)
+    psd_norm             = psd / total_power
+    f['spectral_entropy']= -np.sum(psd_norm * np.log(psd_norm + 1e-8))
+
+    psd_norm              = psd / total_power
+    f['spectral_entropy'] = -np.sum(psd_norm * np.log(psd_norm + 1e-8))
+
     return f
 
 
@@ -80,3 +89,83 @@ def get_rr_features(beat_samples, beat_labels, idx, fs=FS):
         'rr_post' : rr_post,
         'rr_ratio': rr_pre / (rr_post + 1e-8)
     }
+
+def extract_rr_features_dataset(record_list, data_path, aami_map,
+                                 window_before=90, window_after=110, fs=FS):
+    """
+    Extract R-R interval context features for every beat in a record list.
+    Applies the same edge-beat filtering as segment_beats() in preprocessing.py
+    to ensure row-level alignment with the beat matrix from Notebook 02.
+    """
+    import wfdb
+
+    rows = []
+
+    for rec_name in record_list:
+        try:
+            rec = wfdb.rdrecord(data_path + rec_name)
+            ann = wfdb.rdann(data_path + rec_name, 'atr')
+            n_samples = rec.sig_len   # total signal length for this record
+
+            # Filter to beat annotations only
+            beat_samples = []
+            for s, sym in zip(ann.sample, ann.symbol):
+                if sym not in aami_map:
+                    continue
+                # Apply same edge filter as segment_beats in Notebook 02
+                start = s - window_before
+                end   = s + window_after
+                if start < 0 or end > n_samples:
+                    continue   # discard — same as preprocessing pipeline
+                beat_samples.append(s)
+
+            beat_samples = np.array(beat_samples)
+
+            for i in range(len(beat_samples)):
+                if i == 0 or i == len(beat_samples) - 1:
+                    rows.append({'rr_pre': np.nan, 'rr_post': np.nan, 'rr_ratio': np.nan})
+                else:
+                    rr_pre  = (beat_samples[i]   - beat_samples[i-1]) / fs * 1000
+                    rr_post = (beat_samples[i+1] - beat_samples[i])   / fs * 1000
+                    rows.append({
+                        'rr_pre'  : rr_pre,
+                        'rr_post' : rr_post,
+                        'rr_ratio': rr_pre / (rr_post + 1e-8)
+                    })
+
+        except Exception as e:
+            print(f"  Warning: {rec_name} — {e}")
+
+    df = pd.DataFrame(rows)
+    df = df.fillna(df.mean())
+    return df
+
+
+def build_feature_matrix(X, y, rr_df):
+    """
+    Build the full feature DataFrame combining temporal, spectral,
+    and R-R interval features for a dataset split.
+
+    Parameters
+    ----------
+    X : np.ndarray, shape (n_beats, 200)
+        Normalized beat waveforms.
+    y : np.ndarray, shape (n_beats,)
+        AAMI class labels.
+    rr_df : pd.DataFrame
+        R-R interval features aligned row-by-row with X.
+
+    Returns
+    -------
+    pd.DataFrame
+        Feature matrix with label column. Shape: (n_beats, n_features + 1).
+    """
+    rows = []
+    for beat, label in zip(X, y):
+        row = extract_features_single(beat)
+        row['label'] = label
+        rows.append(row)
+
+    df    = pd.DataFrame(rows).reset_index(drop=True)
+    rr_df = rr_df.reset_index(drop=True)
+    return pd.concat([df, rr_df], axis=1)
