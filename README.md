@@ -14,23 +14,25 @@ ecg-arrhythmia-classifier/
 ├── data/
 │   └── raw/                       ← MIT-BIH records (downloaded separately)
 │
-├── notebooks/
+├── notebook/
 │   ├── 01_exploration.ipynb       ← Dataset analysis and visualization
 │   ├── 02_preprocessing.ipynb     ← Signal filtering and beat segmentation
-│   ├── 03_feature_extraction.ipynb
-│   ├── 04_classical_ml.ipynb
-│   └── 05_deep_learning_cnn1d.ipynb
+│   ├── 03_feature_extraction.ipynb ← Feature engineering
+│   ├── 04_classical_ml.ipynb      ← Classical ML models
+│   └── 05_deep_learning_cnn1d.ipynb ← 1D CNN
 │
 ├── src/
-│   ├── preprocessing.py
-│   ├── features.py
-│   ├── models.py
-│   └── evaluation.py
+│   ├── preprocessing.py           ← Filtering and beat segmentation
+│   ├── features.py                ← Feature extraction functions
+│   ├── models.py                  ← Model definitions
+│   ├── evaluation.py              ← Metrics and visualization
+│   └── utils_data.py              ← Dataset utilities
 │
 ├── results/
-│   └── figures/
+│   └── figures/                   ← All generated figures
 │
 ├── requirements.txt
+├── pyproject.toml
 └── README.md
 ```
 
@@ -38,7 +40,7 @@ ecg-arrhythmia-classifier/
 
 ## Dataset
 
-**MIT-BIH Arrhythmia Database** — PhysioNet  
+**MIT-BIH Arrhythmia Database** — PhysioNet [1, 2, 3]  
 48 two-channel ambulatory ECG recordings · 360 Hz · ~110,000 annotated beats
 
 The data is not included in this repository. Download it by running
@@ -49,7 +51,7 @@ import wfdb
 wfdb.dl_database('mitdb', dl_dir='data/raw/')
 ```
 
-Beat labels follow the **AAMI EC57** standard (5 superclasses):
+Beat labels follow the **AAMI EC57** standard [5] (5 superclasses):
 
 | Class | Name | Description |
 |---|---|---|
@@ -69,6 +71,7 @@ cd ecg-arrhythmia-classifier
 python -m venv ecg_env
 source ecg_env/bin/activate
 pip install -r requirements.txt
+pip install -e .
 ```
 
 ---
@@ -78,23 +81,26 @@ pip install -r requirements.txt
 | Notebook | Description | Status |
 |---|---|---|
 | 01_exploration | Dataset characterization, class distribution, morphological analysis | ✅ Complete |
-| 02_preprocessing | Butterworth filtering, beat segmentation, DS1/DS2 split | 🔄 In progress |
-| 03_feature_extraction | Temporal and spectral feature engineering | ⏳ Planned |
-| 04_classical_ml | Random Forest, SVM, MLP with SHAP interpretability | ⏳ Planned |
+| 02_preprocessing | Butterworth filtering, beat segmentation, DS1/DS2 split | ✅ Complete |
+| 03_feature_extraction | Temporal, spectral and R-R interval feature engineering | ✅ Complete |
+| 04_classical_ml | Random Forest, SVM, MLP with SHAP interpretability | 🔄 In progress |
 | 05_deep_learning_cnn1d | 1D CNN trained on raw ECG signal | ⏳ Planned |
 
 ---
 
 ## Methodology
 
-- **Preprocessing:** zero-phase Butterworth bandpass filter (0.5–40 Hz),
+- **Preprocessing:** zero-phase Butterworth bandpass filter (0.5–40 Hz) [6],
   per-beat z-score normalization
 - **Segmentation:** 200-sample windows centered on annotated R-peaks
-  (90 before + 110 after)
+  (90 before + 110 after = 556 ms), capturing full P-QRS-T complex [4]
 - **Train/test split:** inter-patient DS1/DS2 protocol from
-  de Chazal et al. (2004) — no data leakage between patients
-- **Class imbalance:** `class_weight='balanced'` + SMOTE on training set only
+  de Chazal et al. (2004) [4] — no data leakage between patients
+- **Features:** 24 features per beat — temporal morphology, R-R interval
+  context (compensatory pause), and spectral descriptors via Welch's method [7]
+- **Class imbalance:** `class_weight='balanced'` + SMOTETomek on training set only [8]
 - **Primary metric:** F1-macro (equal weight across all 5 classes)
+- **Interpretability:** SHAP TreeExplainer on Random Forest [9]
 
 ---
 
@@ -107,6 +113,16 @@ pip install -r requirements.txt
 [3] G. B. Moody and R. G. Mark, "MIT-BIH Arrhythmia Database," PhysioNet. [Online]. Available: https://physionet.org/content/mitdb/.
 
 [4] P. de Chazal, M. O'Dwyer, and R. B. Reilly, "Automatic classification of heartbeats using ECG morphology and heartbeat interval features," *IEEE Transactions on Biomedical Engineering*, vol. 51, no. 7, pp. 1196–1206, Jul. 2004, doi: 10.1109/TBME.2004.827359.
+
+[5] Association for the Advancement of Medical Instrumentation, *Testing and Reporting Performance Results of Cardiac Rhythm and ST Segment Measurement Algorithms*, AAMI EC57, Arlington, VA, 1998.
+
+[6] P. S. Hamilton and W. J. Tompkins, "Quantitative investigation of QRS detection rules using the MIT/BIH arrhythmia database," *IEEE Transactions on Biomedical Engineering*, vol. 33, no. 12, pp. 1157–1165, Dec. 1986, doi: 10.1109/TBME.1986.325695.
+
+[7] P. D. Welch, "The use of fast Fourier transform for the estimation of power spectra: A method based on time averaging over short, modified periodograms," *IEEE Transactions on Audio and Electroacoustics*, vol. 15, no. 2, pp. 70–73, Jun. 1967, doi: 10.1109/TAU.1967.1161901.
+
+[8] N. V. Chawla, K. W. Bowyer, L. O. Hall, and W. P. Kegelmeyer, "SMOTE: Synthetic Minority Over-sampling Technique," *Journal of Artificial Intelligence Research*, vol. 16, pp. 321–357, Jun. 2002, doi: 10.1613/jair.953.
+
+[9] S. M. Lundberg and S.-I. Lee, "A unified approach to interpreting model predictions," in *Advances in Neural Information Processing Systems*, vol. 30, 2017. [Online]. Available: https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html
 
 ---
 
