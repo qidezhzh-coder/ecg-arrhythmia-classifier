@@ -28,8 +28,10 @@ def extract_features_single(beat, fs=FS):
     r_idx              = np.argmax(beat)
     f['r_amplitude']   = beat[r_idx]
     f['r_position']    = r_idx / len(beat)   # normalized position of R-peak
-    f['pre_r_mean']    = np.mean(beat[:r_idx])
-    f['post_r_mean']   = np.mean(beat[r_idx:])
+    # Guard against edge cases where r_idx is 0 or at the last sample
+    # which would produce empty slices and NaN from np.mean
+    f['pre_r_mean']    = np.mean(beat[:r_idx]) if r_idx > 0 else 0.0
+    f['post_r_mean']   = np.mean(beat[r_idx:]) if r_idx < len(beat) - 1 else 0.0
     f['qrs_asymmetry'] = f['pre_r_mean'] - f['post_r_mean']
     # PVCs often show asymmetric QRS due to aberrant conduction
 

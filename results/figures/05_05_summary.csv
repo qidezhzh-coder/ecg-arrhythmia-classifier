@@ -1,0 +1,5 @@
+Configuration,Best Val Loss,Best Val F1-Macro,Recall F,Recall N,Recall Q,Recall S,Recall V
+1. Baseline (CE standard + shuffle),0.2323,0.516,0.4286,0.9605,0.0,0.0513,0.8207
+2. Only Weighted Loss (CE weighted + shuffle),0.4868,0.4511,0.9286,0.9215,0.0,0.5897,0.8165
+3. Only Sampler (CE standard + WeightedRandomSampler),0.3027,0.526,0.3571,0.9171,0.0,0.3718,0.9367
+4. Combined (CE weighted + WeightedRandomSampler),0.8426,0.3314,0.7857,0.4891,0.0,0.8974,0.8713

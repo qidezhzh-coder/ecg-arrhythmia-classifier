@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 
 
-def get_classical_models():
+def get_classical_models(RANDOM_SEED):
     """
     Return a dictionary of scikit-learn pipelines ready for training.
     Each pipeline includes StandardScaler + classifier.
@@ -19,27 +19,27 @@ def get_classical_models():
         'Random Forest': Pipeline([
             ('scaler', StandardScaler()),
             ('clf', RandomForestClassifier(
-                n_estimators=200,
-                class_weight='balanced',
-                random_state=42,
-                n_jobs=-1
+                n_estimators = 200,
+                class_weight = 'balanced',
+                random_state = RANDOM_SEED,
+                n_jobs = -1
             ))
         ]),
         'SVM (RBF)': Pipeline([
             ('scaler', StandardScaler()),
             ('clf', SVC(
-                kernel='rbf',
-                class_weight='balanced',
-                probability=True,   # needed for AUC-ROC computation
-                random_state=42
+                kernel = 'rbf',
+                class_weight = 'balanced',
+                probability = True,   # needed for AUC-ROC computation
+                random_state = RANDOM_SEED
             ))
         ]),
         'MLP': Pipeline([
             ('scaler', StandardScaler()),
             ('clf', MLPClassifier(
-                hidden_layer_sizes=(128, 64, 32),
-                max_iter=300,
-                random_state=42
+                hidden_layer_sizes = (128, 64, 32),
+                max_iter = 300,
+                random_state = RANDOM_SEED
             ))
         ])
     }
@@ -76,7 +76,7 @@ class ECGClassifierCNN(nn.Module):
             nn.Conv1d(64, 128, kernel_size=5, padding=2),
             nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.AdaptiveAvgPool1d(8),
+            nn.AvgPool1d(kernel_size=6, stride=6),
         )
 
         self.classifier = nn.Sequential(
