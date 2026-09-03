@@ -77,6 +77,18 @@ pip install -r requirements.txt
 ```
 
 ---
+## Reproducing the results
+
+Execute the notebooks in order:
+
+1. Download the dataset: `wfdb.dl_database('mitdb', dl_dir='data/raw/')`
+2. Run `02_preprocessing.ipynb` → generates `data/processed_beats.npz`
+3. Run `03_feature_extraction.ipynb` → generates `data/features_train.csv` and `data/features_test.csv`
+4. Run `04_classical_ml.ipynb` → classical ML results and figures
+5. Run `05_deep_learning_cnn1d.ipynb` → CNN results and figures
+6. `01_exploration.ipynb` can be run independently at any point
+
+---
 
 ## Notebooks
 
