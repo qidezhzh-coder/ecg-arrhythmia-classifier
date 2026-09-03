@@ -97,17 +97,17 @@ pip install -r requirements.txt
 - **Segmentation:** 200-sample windows centered on annotated R-peaks
   (90 before + 110 after = 556 ms), capturing full P-QRS-T complex **[4]**
 - **Train/test split:** inter-patient DS1/DS2 protocol from
-  de Chazal et al. (2004) **[4]** — no data leakage between patients
-- **Features (Notebooks 03–04):** 24 features per beat — temporal morphology,
+  de Chazal et al. (2004) **[4]**, so no data leakage between patients
+- **Features (Notebooks 03–04):** 24 features per beat, temporal morphology,
   R-R interval context (compensatory pause), and spectral descriptors
   via Welch's method **[7]**
 - **Class imbalance (classical ML):** `class_weight='balanced'` +
   SMOTETomek inside each CV fold **[8]**
-- **Class imbalance (CNN):** weighted CrossEntropyLoss only —
-  ablation study in Notebook 05 shows WeightedRandomSampler causes
-  overfitting with class Q (8 training samples)
+- **Class imbalance (CNN):** weighted CrossEntropyLoss only. Since in an ablation study in Notebook 05 shows WeightedRandomSampler causes overfitting with class Q (8 training samples)
 - **Primary metric:** F1-macro (equal weight across all 5 classes)
 - **Interpretability:** SHAP TreeExplainer on Random Forest **[9]**
+- **Optimizer (CNN):** Adam with weight decay **[10]**
+- **ECG component durations:** following standard clinical reference values **[11]**
 
 ---
 
